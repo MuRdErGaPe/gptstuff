@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Idle Mycelium + Life Garden</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1b1f1d;
+      color: #d6f5e3;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+    }
+    .game, .garden {
+      flex: 1;
+      max-width: 500px;
+    }
+    h1, h2 {
+      color: #9cf5a6;
+    }
+    button {
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1em;
+      margin: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #444;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 20px);
+      grid-template-rows: repeat(10, 20px);
+      margin: auto;
+      gap: 1px;
+    }
+    .cell {
+      width: 20px;
+      height: 20px;
+      background: #333;
+    }
+    .alive {
+      background: #9cf5a6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Idle Game -->
+  <div class="game">
+    <h1>🍄 Idle Mycelium</h1>
+    <div id="stats">Fungal Energy: 0 | Network Size: 0 | Growth Rate: 0/s</div>
+
+    <!-- Player Actions -->
+    <button onclick="grow()">Grow Hyphae (+X Energy)</button>
+    <button onclick="releaseSpores()">Release Spores (20 energy, +3 Life Cells)</button>
+    <button onclick="harvestNutrients()">Harvest Nutrients (50 energy, 2x multiplier for 10s)</button>
+    <button onclick="spreadMushrooms()">Spread Mushrooms (200 energy, +5 Life Cells)</button>
+
+    <!-- Shop -->
+    <div class="shop">
+      <h2>🌱 Growth Upgrades</h2>
+      <button id="symbiosisBtn" onclick="buySymbiosis()">Root Symbiosis (+1/s) - Cost: 50</button><br>
+      <button id="decayBtn" onclick="buyDecay()">Decay Absorption (+5/s) - Cost: 200</button><br>
+      <button id="mycorrhizaBtn" onclick="buyMycorrhiza()">Mycorrhizae Alliance (+20/s) - Cost: 1000</button><br>
+      <button id="enzymeBtn" onclick="buyEnzyme()">Enzyme Boost (+10% multiplier) - Cost: 500</button><br>
+      <button id="hyphaeBtn" onclick="buyHyphae()">Hyphal Highways (+1 click power) - Cost: 150</button>
+    </div>
+
+    <!-- Evolutions -->
+    <div class="evolve">
+      <h2>🧬 Evolve</h2>
+      <button onclick="evolve()">Shed Spores (Prestige) - Requires 1000 Energy</button>
+      <div id="evolutions">Evolutions: 0 | Bonus Multiplier: x1</div>
+    </div>
+  </div>
+
+  <!-- Life Garden -->
+  <div class="garden">
+    <h2>🌿 Life Garden</h2>
+    <div class="grid" id="grid"></div>
+    <p id="gardenStatus">Active Cells: 0</p>
+  </div>
+
+  <script>
+    // Idle Mycelium Variables
+    let energy = 0;
+    let growthRate = 0;
+    let networkSize = 0;
+    let evolutions = 0;
+    let multiplier = 1;
+    let clickPower = 1;
+    let costReduction = 1;
+
+    // Upgrade Costs
+    let symbiosisCost = 50;
+    let decayCost = 200;
+    let mycorrhizaCost = 1000;
+    let enzymeCost = 500;
+    let hyphaeCost = 150;
+
+    const stats = document.getElementById('stats');
+    const evoStats = document.getElementById('evolutions');
+
+    function updateDisplay() {
+      stats.textContent = `Fungal Energy: ${Math.floor(energy)} | Network Size: ${networkSize} | Growth Rate: ${growthRate}/s`;
+      evoStats.textContent = `Evolutions: ${evolutions} | Bonus Multiplier: x${multiplier}`;
+    }
+
+    // Player Actions
+    function grow() {
+      energy += clickPower * multiplier;
+      networkSize += clickPower;
+      placeCell();
+      updateDisplay();
+    }
+
+    function releaseSpores() {
+      if (energy >= 20) {
+        energy -= 20;
+        let spores = 3 + evolutions; // scales with evolutions
+        for (let i = 0; i < spores; i++) placeCell();
+        updateDisplay();
+      }
+    }
+
+    function harvestNutrients() {
+      if (energy >= 50) {
+        energy -= 50;
+        multiplier *= 2;
+        updateDisplay();
+        setTimeout(() => {
+          multiplier /= 2;
+          updateDisplay();
+        }, 10000);
+      }
+    }
+
+    function spreadMushrooms() {
+      if (energy >= 200) {
+        energy -= 200;
+        for (let i = 0; i < 5; i++) placeCell();
+        updateDisplay();
+      }
+    }
+
+    // Upgrades with scaling costs
+    function buySymbiosis() {
+      if (energy >= symbiosisCost) {
+        energy -= symbiosisCost;
+        growthRate += 1;
+        symbiosisCost = Math.floor(symbiosisCost * 1.5);
+        document.getElementById("symbiosisBtn").textContent =
+          `Root Symbiosis (+1/s) - Cost: ${symbiosisCost}`;
+        updateDisplay();
+      }
+    }
+
+    function buyDecay() {
+      if (energy >= decayCost) {
+        energy -= decayCost;
+        growthRate += 5;
+        decayCost = Math.floor(decayCost * 1.5);
+        document.getElementById("decayBtn").textContent =
+          `Decay Absorption (+5/s) - Cost: ${decayCost}`;
+        updateDisplay();
+      }
+    }
+
+    function buyMycorrhiza() {
+      if (energy >= mycorrhizaCost) {
+        energy -= mycorrhizaCost;
+        growthRate += 20;
+        mycorrhizaCost = Math.floor(mycorrhizaCost * 1.5);
+        document.getElementById("mycorrhizaBtn").textContent =
+          `Mycorrhizae Alliance (+20/s) - Cost: ${mycorrhizaCost}`;
+        updateDisplay();
+      }
+    }
+
+    function buyEnzyme() {
+      if (energy >= enzymeCost) {
+        energy -= enzymeCost;
+        multiplier *= 1.1;
+        enzymeCost = Math.floor(enzymeCost * 1.5);
+        document.getElementById("enzymeBtn").textContent =
+          `Enzyme Boost (+10% multiplier) - Cost: ${enzymeCost}`;
+        updateDisplay();
+      }
+    }
+
+    function buyHyphae() {
+      if (energy >= hyphaeCost) {
+        energy -= hyphaeCost;
+        clickPower += 1;
+        hyphaeCost = Math.floor(hyphaeCost * 1.5);
+        document.getElementById("hyphaeBtn").textContent =
+          `Hyphal Highways (+1 click power) - Cost: ${hyphaeCost}`;
+        updateDisplay();
+      }
+    }
+
+    // Prestige / Evolutions
+    function evolve() {
+      if (energy >= 1000) {
+        let choice = prompt("Choose evolution:\n1) Spore Burst (+5 click power)\n2) Deep Roots (20% cheaper upgrades)\n3) Bioluminescence (+1 multiplier)");
+        evolutions++;
+        if (choice === "1") clickPower += 5;
+        if (choice === "2") costReduction *= 0.8;
+        if (choice === "3") multiplier += 1;
+        energy = 0; growthRate = 0; networkSize = 0;
+        resetGarden();
+        updateDisplay();
+      }
+    }
+
+    setInterval(() => {
+      energy += growthRate * multiplier;
+      networkSize += growthRate;
+      updateDisplay();
+    }, 1000);
+
+    // ------------------------
+    // Conway's Game of Life
+    // ------------------------
+    const size = 10;
+    const gridEl = document.getElementById('grid');
+    let grid = Array(size).fill().map(()=>Array(size).fill(0));
+    let survivalTime = 0;
+
+    function renderGrid() {
+      gridEl.innerHTML = "";
+      let aliveCount = 0;
+      for (let r=0; r<size; r++) {
+        for (let c=0; c<size; c++) {
+          const div = document.createElement("div");
+          div.classList.add("cell");
+          if (grid[r][c] === 1) {
+            div.classList.add("alive");
+            aliveCount++;
+          }
+          gridEl.appendChild(div);
+        }
+      }
+      document.getElementById('gardenStatus').textContent = `Active Cells: ${aliveCount}`;
+      checkGardenWin(aliveCount);
+    }
+
+    function stepLife() {
+      let newGrid = Array(size).fill().map(()=>Array(size).fill(0));
+      for (let r=0; r<size; r++) {
+        for (let c=0; c<size; c++) {
+          let neighbors = 0;
+          for (let dr=-1; dr<=1; dr++) {
+            for (let dc=-1; dc<=1; dc++) {
+              if (dr===0 && dc===0) continue;
+              let nr = r+dr, nc=c+dc;
+              if (nr>=0 && nr<size && nc>=0 && nc<size) {
+                neighbors += grid[nr][nc];
+              }
+            }
+          }
+          if (grid[r][c]===1 && (neighbors===2 || neighbors===3)) newGrid[r][c]=1;
+          if (grid[r][c]===0 && neighbors===3) newGrid[r][c]=1;
+        }
+      }
+      grid = newGrid;
+      renderGrid();
+    }
+
+    function placeCell() {
+      let empty = [];
+      for (let r=0; r<size; r++) {
+        for (let c=0; c<size; c++) {
+          if (grid[r][c]===0) empty.push([r,c]);
+        }
+      }
+      if (empty.length>0) {
+        const [r,c] = empty[Math.floor(Math.random()*empty.length)];
+        grid[r][c]=1;
+        renderGrid();
+      }
+    }
+
+    function checkGardenWin(aliveCount) {
+      // Victory Condition 1: 50+ cells alive at once
+      if (aliveCount >= 50) {
+        alert("🌿 Your Mycelium Network conquered the garden!");
+        energy += 500;
+        evolutions++;
+        multiplier += 1;
+        resetGarden();
+      }
+
+      // Victory Condition 2: survive 30s with >= 10 cells
+      if (aliveCount >= 10) {
+        survivalTime++;
+        if (survivalTime >= 30) {
+          alert("🧬 Stable symbiosis achieved!");
+          evolutions++;
+          multiplier += 1;
+          energy += 300;
+          resetGarden();
+        }
+      } else {
+        survivalTime = 0;
+      }
+    }
+
+    function resetGarden() {
+      grid = Array(size).fill().map(()=>Array(size).fill(0));
+      survivalTime = 0;
+      renderGrid();
+    }
+
+    setInterval(stepLife, 1000);
+    renderGrid();
+  </script>
+</body>
+</html>
