@@ -1,0 +1,21 @@
+.hover-correct-tooltip {
+  position: fixed;
+  z-index: 2147483647;
+  background: rgba(40, 44, 52, 0.95);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  display: none;
+  max-width: 240px;
+}
+
+.hover-correct-tooltip strong {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
