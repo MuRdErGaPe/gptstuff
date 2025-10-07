@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "Hover Correct",
+  "version": "1.0.0",
+  "description": "Auto-correct misspelled words by hovering and pressing a hotkey.",
+  "permissions": [
+    "https://api.datamuse.com/"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "css": ["content_styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
