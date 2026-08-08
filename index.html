@@ -1,326 +1,1557 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Idle Mycelium + Life Garden</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #1b1f1d;
-      color: #d6f5e3;
-      padding: 30px;
-      display: flex;
-      justify-content: center;
-      gap: 50px;
-    }
-    .game, .garden {
-      flex: 1;
-      max-width: 500px;
-    }
-    h1, h2 {
-      color: #9cf5a6;
-    }
-    button {
-      background-color: #2e7d32;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      font-size: 1em;
-      margin: 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #444;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(10, 20px);
-      grid-template-rows: repeat(10, 20px);
-      margin: auto;
-      gap: 1px;
-    }
-    .cell {
-      width: 20px;
-      height: 20px;
-      background: #333;
-    }
-    .alive {
-      background: #9cf5a6;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Proving Grounds of the Mad Overlord — Idle</title>
+<style>
+  :root {
+    --bg: #000018;
+    --fg: #a8b8ff;
+    --hi: #ffffff;
+    --dim: #6070c0;
+    --warn: #ffb060;
+    --bad: #ff5050;
+    --good: #60ff80;
+    --gold: #ffd050;
+    --panel: #000030;
+    --border: #4050a0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--fg); font-family: 'Courier New', 'Consolas', monospace; font-size: 14px; }
+  body { padding: 12px; min-height:100vh; }
+  a { color: var(--hi); }
+  h1, h2, h3 { color: var(--hi); margin: 0 0 6px 0; letter-spacing:1px; }
+  h1 { font-size: 20px; text-align:center; }
+  h2 { font-size: 15px; border-bottom:1px solid var(--border); padding-bottom:2px; }
+  .app { display:grid; grid-template-columns: 380px 1fr 320px; gap: 10px; max-width: 1400px; margin: 0 auto; }
+  .panel { border: 1px solid var(--border); background: var(--panel); padding: 8px; }
+  .panel + .panel { margin-top: 8px; }
+  button {
+    background: #000060; color: var(--hi); border: 1px solid var(--border);
+    padding: 4px 8px; font-family: inherit; font-size: 12px; cursor:pointer;
+    margin: 2px 2px 2px 0;
+  }
+  button:hover:not(:disabled) { background:#0000a0; }
+  button:disabled { color:#404060; cursor:not-allowed; }
+  .gold { color: var(--gold); }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  .warn { color: var(--warn); }
+  .hi { color: var(--hi); }
+  .dim { color: var(--dim); }
+  .row { display:flex; justify-content:space-between; gap: 8px; }
+  table { width:100%; border-collapse:collapse; font-size: 12px; }
+  td { padding: 1px 4px; vertical-align: top; }
+  .party td { border-bottom: 1px dotted #202850; }
+  .party tr.dead td { color:#a04040; }
+  .party tr.selected td { background:#00003c; }
+  .hpbar { display:inline-block; width:80px; height:8px; background:#300; border:1px solid #500; vertical-align:middle; }
+  .hpbar > i { display:block; height:100%; background:linear-gradient(#7f7,#3a3); }
+  .log { height: 300px; overflow-y: auto; background:#000; border:1px solid var(--border); padding: 6px; font-size:12px; }
+  .log > div { line-height:1.3; }
+  .maze { background:#000; border:1px solid var(--border); padding: 12px; text-align:center; white-space:pre; font-size:13px; color:#8090ff; line-height:1.1; }
+  .maze .floor-name { color: var(--hi); letter-spacing:2px; margin-bottom: 4px; }
+  .toggles label { display:block; user-select:none; cursor:pointer; padding: 2px 0; font-size:12px; }
+  .toggles input { vertical-align: middle; margin-right: 4px; }
+  .kv { display:grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 12px; }
+  .kv > div:nth-child(odd) { color: var(--dim); }
+  .locations button { display:block; width:100%; text-align:left; margin: 3px 0; padding: 6px; }
+  .banner {
+    background:#000; border:2px double var(--border); padding: 6px; text-align:center;
+    color: var(--hi); letter-spacing: 3px; margin-bottom: 8px;
+  }
+  details { border: 1px solid var(--border); padding: 4px 8px; margin: 4px 0; background:#000024; }
+  details summary { cursor:pointer; color: var(--hi); }
+  .stat { text-align:right; font-variant-numeric: tabular-nums; }
+  .tag { display:inline-block; padding: 0 4px; border:1px solid var(--border); margin-right:4px; font-size:10px; color:var(--dim); }
+  .tag.on { color: var(--good); border-color: var(--good); }
+  .tag.dead { color: var(--bad); border-color: var(--bad); }
+  .tag.status { color: var(--warn); border-color: var(--warn); }
+  .encounter { color: var(--warn); font-weight: bold; }
+  .rare { color: #ff70ff; }
+  .werdna { color: #ff4040; font-weight:bold; letter-spacing:2px; }
+  .footer { text-align:center; color:var(--dim); font-size:11px; margin-top: 14px; }
+  .clickable { cursor:pointer; }
+  .clickable:hover { color: var(--hi); }
+</style>
 </head>
 <body>
+<div class="app">
 
-  <!-- Idle Game -->
-  <div class="game">
-    <h1>🍄 Idle Mycelium</h1>
-    <div id="stats">Fungal Energy: 0 | Network Size: 0 | Growth Rate: 0/s</div>
-
-    <!-- Player Actions -->
-    <button onclick="grow()">Grow Hyphae (+X Energy)</button>
-    <button onclick="releaseSpores()">Release Spores (20 energy, +3 Life Cells)</button>
-    <button onclick="harvestNutrients()">Harvest Nutrients (50 energy, 2x multiplier for 10s)</button>
-    <button onclick="spreadMushrooms()">Spread Mushrooms (200 energy, +5 Life Cells)</button>
-
-    <!-- Shop -->
-    <div class="shop">
-      <h2>🌱 Growth Upgrades</h2>
-      <button id="symbiosisBtn" onclick="buySymbiosis()">Root Symbiosis (+1/s) - Cost: 50</button><br>
-      <button id="decayBtn" onclick="buyDecay()">Decay Absorption (+5/s) - Cost: 200</button><br>
-      <button id="mycorrhizaBtn" onclick="buyMycorrhiza()">Mycorrhizae Alliance (+20/s) - Cost: 1000</button><br>
-      <button id="enzymeBtn" onclick="buyEnzyme()">Enzyme Boost (+10% multiplier) - Cost: 500</button><br>
-      <button id="hyphaeBtn" onclick="buyHyphae()">Hyphal Highways (+1 click power) - Cost: 150</button>
+  <!-- LEFT: PARTY -->
+  <div>
+    <div class="panel">
+      <h2>PARTY OF ADVENTURERS</h2>
+      <table class="party" id="party-table"></table>
+      <div style="margin-top:6px;">
+        <button id="btn-recruit">Recruit at Tavern</button>
+        <button id="btn-dismiss">Dismiss Selected</button>
+      </div>
+      <div class="dim" style="margin-top:4px; font-size:11px;">
+        Front row (1-3) melees. Back row (4-6) casts and shoots.
+      </div>
     </div>
 
-    <!-- Evolutions -->
-    <div class="evolve">
-      <h2>🧬 Evolve</h2>
-      <button onclick="evolve()">Shed Spores (Prestige) - Requires 1000 Energy</button>
-      <div id="evolutions">Evolutions: 0 | Bonus Multiplier: x1</div>
+    <div class="panel">
+      <h2>SELECTED CHARACTER</h2>
+      <div id="char-detail" class="dim">No character selected.</div>
+    </div>
+
+    <div class="panel">
+      <h2>PARTY VAULT</h2>
+      <div class="kv" id="vault"></div>
     </div>
   </div>
 
-  <!-- Life Garden -->
-  <div class="garden">
-    <h2>🌿 Life Garden</h2>
-    <div class="grid" id="grid"></div>
-    <p id="gardenStatus">Active Cells: 0</p>
+  <!-- CENTER: WORLD -->
+  <div>
+    <div class="banner">PROVING GROUNDS OF THE MAD OVERLORD</div>
+
+    <div class="panel">
+      <div class="row">
+        <div><span class="dim">Location:</span> <span id="loc-name" class="hi">CASTLE</span></div>
+        <div><span class="dim">Gold:</span> <span id="gold" class="gold">0</span></div>
+        <div><span class="dim">Time:</span> <span id="playtime">0h 0m</span></div>
+      </div>
+    </div>
+
+    <div class="panel" id="view"></div>
+
+    <div class="panel">
+      <h2>COMBAT / EVENT LOG</h2>
+      <div id="log" class="log"></div>
+    </div>
   </div>
 
-  <script>
-    // Idle Mycelium Variables
-    let energy = 0;
-    let growthRate = 0;
-    let networkSize = 0;
-    let evolutions = 0;
-    let multiplier = 1;
-    let clickPower = 1;
-    let costReduction = 1;
+  <!-- RIGHT: CONTROLS / STATS -->
+  <div>
+    <div class="panel">
+      <h2>AUTOMATION</h2>
+      <div class="toggles" id="toggles"></div>
+    </div>
 
-    // Upgrade Costs
-    let symbiosisCost = 50;
-    let decayCost = 200;
-    let mycorrhizaCost = 1000;
-    let enzymeCost = 500;
-    let hyphaeCost = 150;
+    <div class="panel">
+      <h2>ADVENTURES SO FAR</h2>
+      <div class="kv" id="stats-kv"></div>
+    </div>
 
-    const stats = document.getElementById('stats');
-    const evoStats = document.getElementById('evolutions');
+    <div class="panel">
+      <h2>HEROES OF LLYLGAMYN</h2>
+      <div id="prestige-box"></div>
+    </div>
 
-    function updateDisplay() {
-      stats.textContent = `Fungal Energy: ${Math.floor(energy)} | Network Size: ${networkSize} | Growth Rate: ${growthRate}/s`;
-      evoStats.textContent = `Evolutions: ${evolutions} | Bonus Multiplier: x${multiplier}`;
-    }
+    <div class="panel">
+      <h2>SAVE / OPTIONS</h2>
+      <button id="btn-save">Save Now</button>
+      <button id="btn-export">Export</button>
+      <button id="btn-import">Import</button>
+      <button id="btn-wipe">Wipe Save</button>
+      <div class="dim" style="font-size:11px; margin-top:4px;">Auto-saves every 15 seconds.</div>
+    </div>
+  </div>
+</div>
 
-    // Player Actions
-    function grow() {
-      energy += clickPower * multiplier;
-      networkSize += clickPower;
-      placeCell();
-      updateDisplay();
-    }
+<div class="footer">
+  A tribute to Sir-Tech's Wizardry: Proving Grounds of the Mad Overlord (1981).<br>
+  Trebor sent you. Werdna awaits below.
+</div>
 
-    function releaseSpores() {
-      if (energy >= 20) {
-        energy -= 20;
-        let spores = 3 + evolutions; // scales with evolutions
-        for (let i = 0; i < spores; i++) placeCell();
-        updateDisplay();
-      }
-    }
+<script>
+"use strict";
 
-    function harvestNutrients() {
-      if (energy >= 50) {
-        energy -= 50;
-        multiplier *= 2;
-        updateDisplay();
-        setTimeout(() => {
-          multiplier /= 2;
-          updateDisplay();
-        }, 10000);
-      }
-    }
+// ============================================================
+// DATA - RACES / CLASSES / SPELLS / MONSTERS / ITEMS
+// ============================================================
 
-    function spreadMushrooms() {
-      if (energy >= 200) {
-        energy -= 200;
-        for (let i = 0; i < 5; i++) placeCell();
-        updateDisplay();
-      }
-    }
+const RACES = {
+  Human:  { abbrev:'Hum', base:{STR:8,IQ:8,PIE:5,VIT:8,AGI:8,LUC:9},   bonus:8  },
+  Elf:    { abbrev:'Elf', base:{STR:7,IQ:10,PIE:10,VIT:6,AGI:9,LUC:6}, bonus:8  },
+  Dwarf:  { abbrev:'Dwa', base:{STR:10,IQ:7,PIE:10,VIT:10,AGI:5,LUC:6},bonus:8  },
+  Gnome:  { abbrev:'Gno', base:{STR:7,IQ:7,PIE:10,VIT:8,AGI:10,LUC:7}, bonus:8  },
+  Hobbit: { abbrev:'Hob', base:{STR:5,IQ:7,PIE:7,VIT:6,AGI:10,LUC:15}, bonus:8  },
+};
 
-    // Upgrades with scaling costs
-    function buySymbiosis() {
-      if (energy >= symbiosisCost) {
-        energy -= symbiosisCost;
-        growthRate += 1;
-        symbiosisCost = Math.floor(symbiosisCost * 1.5);
-        document.getElementById("symbiosisBtn").textContent =
-          `Root Symbiosis (+1/s) - Cost: ${symbiosisCost}`;
-        updateDisplay();
-      }
-    }
+const CLASSES = {
+  Fighter: { abbrev:'FIG', req:{STR:11},                                     alignAllow:['G','N','E'], hpDie:10, spells:null },
+  Mage:    { abbrev:'MAG', req:{IQ:11},                                      alignAllow:['G','N','E'], hpDie:4,  spells:'mage'   },
+  Priest:  { abbrev:'PRI', req:{PIE:11},                                     alignAllow:['G','E'],     hpDie:8,  spells:'priest' },
+  Thief:   { abbrev:'THI', req:{AGI:11},                                     alignAllow:['N','E'],     hpDie:6,  spells:null },
+  Bishop:  { abbrev:'BIS', req:{IQ:12,PIE:12},                               alignAllow:['G','E'],     hpDie:6,  spells:'both'   },
+  Samurai: { abbrev:'SAM', req:{STR:15,IQ:11,PIE:10,VIT:14,AGI:10},          alignAllow:['G','N'],     hpDie:10, spells:'mage'   },
+  Lord:    { abbrev:'LOR', req:{STR:15,IQ:12,PIE:12,VIT:15,AGI:14,LUC:15},   alignAllow:['G'],         hpDie:10, spells:'priest' },
+  Ninja:   { abbrev:'NIN', req:{STR:17,IQ:17,PIE:17,VIT:17,AGI:17,LUC:17},   alignAllow:['E'],         hpDie:8,  spells:null },
+};
 
-    function buyDecay() {
-      if (energy >= decayCost) {
-        energy -= decayCost;
-        growthRate += 5;
-        decayCost = Math.floor(decayCost * 1.5);
-        document.getElementById("decayBtn").textContent =
-          `Decay Absorption (+5/s) - Cost: ${decayCost}`;
-        updateDisplay();
-      }
-    }
+function xpForLevel(cls, lvl) {
+  const base = { Fighter:1000, Mage:1100, Priest:1050, Thief:900, Bishop:1200, Samurai:1300, Lord:1300, Ninja:1450 };
+  const b = base[cls] || 1000;
+  return Math.floor(b * Math.pow(1.72, lvl-1));
+}
 
-    function buyMycorrhiza() {
-      if (energy >= mycorrhizaCost) {
-        energy -= mycorrhizaCost;
-        growthRate += 20;
-        mycorrhizaCost = Math.floor(mycorrhizaCost * 1.5);
-        document.getElementById("mycorrhizaBtn").textContent =
-          `Mycorrhizae Alliance (+20/s) - Cost: ${mycorrhizaCost}`;
-        updateDisplay();
-      }
-    }
+const SPELLS = {
+  // Mage L1
+  HALITO:   { level:1, school:'mage',   target:'oneEnemy', dmg:[1,8],  desc:'a flame missile'   },
+  MOGREF:   { level:1, school:'mage',   target:'self',     effect:'ac',  ac:-2, desc:'body iron' },
+  KATINO:   { level:1, school:'mage',   target:'groupEnemy', status:'ASLEEP', desc:'sleep group' },
+  DUMAPIC:  { level:1, school:'mage',   target:'utility',  effect:'locate', desc:'clarity' },
+  // Mage L2
+  DILTO:    { level:2, school:'mage',   target:'groupEnemy', effect:'blind', desc:'darkness' },
+  SOPIC:    { level:2, school:'mage',   target:'self', effect:'ac', ac:-4, desc:'glass'  },
+  // Mage L3
+  MAHALITO: { level:3, school:'mage',   target:'groupEnemy', dmg:[4,24], desc:'big flame' },
+  MOLITO:   { level:3, school:'mage',   target:'groupEnemy', dmg:[3,18], desc:'spark storm' },
+  // Mage L4
+  DALTO:    { level:4, school:'mage',   target:'groupEnemy', dmg:[6,36], desc:'cold blast' },
+  LAHALITO: { level:4, school:'mage',   target:'groupEnemy', dmg:[6,36], desc:'flame storm' },
+  MORLIS:   { level:4, school:'mage',   target:'groupEnemy', effect:'fear', desc:'greater fear' },
+  // Mage L5
+  MADALTO:  { level:5, school:'mage',   target:'groupEnemy', dmg:[8,64], desc:'iceberg' },
+  MAKANITO: { level:5, school:'mage',   target:'allEnemies', effect:'suffocate', desc:'kill under level 8' },
+  MAMORLIS: { level:5, school:'mage',   target:'allEnemies', effect:'fear', desc:'terror' },
+  // Mage L6
+  LAKANITO: { level:6, school:'mage',   target:'groupEnemy', effect:'vacuum', desc:'kill weakest' },
+  ZILWAN:   { level:6, school:'mage',   target:'oneEnemy', effect:'dispel', desc:'destroy undead' },
+  MASOPIC:  { level:6, school:'mage',   target:'party', effect:'ac', ac:-4, desc:'glass, all' },
+  // Mage L7
+  MALOR:    { level:7, school:'mage',   target:'utility', effect:'teleport', desc:'apport' },
+  MAHAMAN:  { level:7, school:'mage',   target:'utility', effect:'wish', desc:'grants a boon' },
+  TILTOWAIT:{ level:7, school:'mage',   target:'allEnemies', dmg:[10,150], desc:'the fusion flame' },
 
-    function buyEnzyme() {
-      if (energy >= enzymeCost) {
-        energy -= enzymeCost;
-        multiplier *= 1.1;
-        enzymeCost = Math.floor(enzymeCost * 1.5);
-        document.getElementById("enzymeBtn").textContent =
-          `Enzyme Boost (+10% multiplier) - Cost: ${enzymeCost}`;
-        updateDisplay();
-      }
-    }
+  // Priest L1
+  KALKI:    { level:1, school:'priest', target:'party',    effect:'ac', ac:-1, desc:'blessings' },
+  DIOS:     { level:1, school:'priest', target:'oneAlly',  heal:[1,8], desc:'heal' },
+  BADIOS:   { level:1, school:'priest', target:'oneEnemy', dmg:[1,8], desc:'harm' },
+  MILWA:    { level:1, school:'priest', target:'utility',  effect:'light', desc:'soft light' },
+  // Priest L2
+  MANIFO:   { level:2, school:'priest', target:'groupEnemy', status:'PARALYZED', chance:0.25, desc:'statue' },
+  MONTINO:  { level:2, school:'priest', target:'groupEnemy', effect:'silence', desc:'still air' },
+  MATU:     { level:2, school:'priest', target:'party', effect:'ac', ac:-2, desc:'blessings, all' },
+  CALFO:    { level:2, school:'priest', target:'utility', effect:'trap', desc:'trap sense' },
+  // Priest L3
+  LOMILWA:  { level:3, school:'priest', target:'utility', effect:'light', desc:'more light' },
+  DIALKO:   { level:3, school:'priest', target:'oneAlly', effect:'cure', desc:'cure paralysis' },
+  BAMATU:   { level:3, school:'priest', target:'party', effect:'ac', ac:-4, desc:'prayer' },
+  // Priest L4
+  LATUMAPIC:{ level:4, school:'priest', target:'utility', effect:'identify', desc:'true seeing' },
+  BARIKO:   { level:4, school:'priest', target:'groupEnemy', dmg:[4,24], desc:'wind blades' },
+  DIAL:     { level:4, school:'priest', target:'oneAlly', heal:[2,16], desc:'greater heal' },
+  BADIAL:   { level:4, school:'priest', target:'oneEnemy', dmg:[2,16], desc:'greater harm' },
+  // Priest L5
+  DIALMA:   { level:5, school:'priest', target:'oneAlly', heal:[3,24], desc:'major heal' },
+  BADIALMA: { level:5, school:'priest', target:'oneEnemy', dmg:[3,24], desc:'major harm' },
+  LITOKAN:  { level:5, school:'priest', target:'groupEnemy', dmg:[3,24], desc:'pillar of fire' },
+  LATUMOFIS:{ level:5, school:'priest', target:'oneAlly', effect:'cure', desc:'cure poison' },
+  // Priest L6
+  LORTO:    { level:6, school:'priest', target:'groupEnemy', dmg:[6,36], desc:'blades' },
+  MADI:     { level:6, school:'priest', target:'oneAlly', effect:'fullheal', desc:'full heal' },
+  MABADI:   { level:6, school:'priest', target:'oneEnemy', effect:'crippling', desc:'crippling harm' },
+  // Priest L7
+  MALIKTO:  { level:7, school:'priest', target:'allEnemies', dmg:[12,72], desc:'the word of god' },
+  KADORTO:  { level:7, school:'priest', target:'oneAlly', effect:'resurrect', desc:'resurrection' },
+};
 
-    function buyHyphae() {
-      if (energy >= hyphaeCost) {
-        energy -= hyphaeCost;
-        clickPower += 1;
-        hyphaeCost = Math.floor(hyphaeCost * 1.5);
-        document.getElementById("hyphaeBtn").textContent =
-          `Hyphal Highways (+1 click power) - Cost: ${hyphaeCost}`;
-        updateDisplay();
-      }
-    }
+const SPELL_LEVEL_INDEX = { mage:{}, priest:{} };
+for (const [name, s] of Object.entries(SPELLS)) {
+  (SPELL_LEVEL_INDEX[s.school][s.level] ||= []).push(name);
+}
 
-    // Prestige / Evolutions
-    function evolve() {
-      if (energy >= 1000) {
-        let choice = prompt("Choose evolution:\n1) Spore Burst (+5 click power)\n2) Deep Roots (20% cheaper upgrades)\n3) Bioluminescence (+1 multiplier)");
-        evolutions++;
-        if (choice === "1") clickPower += 5;
-        if (choice === "2") costReduction *= 0.8;
-        if (choice === "3") multiplier += 1;
-        energy = 0; growthRate = 0; networkSize = 0;
-        resetGarden();
-        updateDisplay();
-      }
-    }
+const ITEMS = [
+  // WEAPONS
+  { id:'dagger',      name:'Dagger',            slot:'weapon', dmg:[1,4],  price:5,    eq:['FIG','MAG','PRI','THI','BIS','SAM','LOR','NIN'] },
+  { id:'staff',       name:'Staff',             slot:'weapon', dmg:[1,6],  price:10,   eq:['MAG','PRI','BIS','SAM','LOR'] },
+  { id:'mace',        name:'Mace',              slot:'weapon', dmg:[1,8],  price:30,   eq:['FIG','PRI','BIS','SAM','LOR','NIN'] },
+  { id:'longsword',   name:'Long Sword',        slot:'weapon', dmg:[1,8],  price:25,   eq:['FIG','SAM','LOR','NIN'] },
+  { id:'anointedmace',name:'Anointed Mace',     slot:'weapon', dmg:[2,10], price:1500, eq:['PRI','BIS','LOR'] },
+  { id:'longsword1',  name:'Long Sword +1',     slot:'weapon', dmg:[2,9],  price:8000, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'shortsword1', name:'Short Sword +1',    slot:'weapon', dmg:[2,7],  price:5000, eq:['FIG','THI','SAM','LOR','NIN'] },
+  { id:'blade',       name:'Blade Cuisinart',   slot:'weapon', dmg:[5,15], price:60000,eq:['FIG','SAM','LOR','NIN'] },
+  { id:'muramasa',    name:'Muramasa Blade!',   slot:'weapon', dmg:[10,20],price:1000000, eq:['SAM'] },
+  { id:'shuriken',    name:'Shuriken',          slot:'weapon', dmg:[3,15], price:100000, eq:['NIN'] },
 
-    setInterval(() => {
-      energy += growthRate * multiplier;
-      networkSize += growthRate;
-      updateDisplay();
-    }, 1000);
+  // ARMOR (body)
+  { id:'robes',       name:'Robes',             slot:'armor', ac:1,  price:15,   eq:['MAG','PRI','BIS','SAM','LOR','NIN'] },
+  { id:'leather',     name:'Leather Armor',     slot:'armor', ac:2,  price:50,   eq:['FIG','PRI','THI','BIS','SAM','LOR','NIN'] },
+  { id:'chain',       name:'Chain Mail',        slot:'armor', ac:4,  price:90,   eq:['FIG','PRI','BIS','SAM','LOR','NIN'] },
+  { id:'plate',       name:'Plate Mail',        slot:'armor', ac:5,  price:750,  eq:['FIG','SAM','LOR','NIN'] },
+  { id:'plate1',      name:'Plate Mail +1',     slot:'armor', ac:6,  price:6000, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'plate2',      name:'Plate Mail +2',     slot:'armor', ac:7,  price:60000, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'lord',        name:"Lord's Garb",       slot:'armor', ac:10, price:1000000, eq:['LOR'] },
 
-    // ------------------------
-    // Conway's Game of Life
-    // ------------------------
-    const size = 10;
-    const gridEl = document.getElementById('grid');
-    let grid = Array(size).fill().map(()=>Array(size).fill(0));
-    let survivalTime = 0;
+  // SHIELDS
+  { id:'smallshield', name:'Small Shield',      slot:'shield', ac:1, price:20,  eq:['FIG','PRI','BIS','SAM','LOR','NIN'] },
+  { id:'largeshield', name:'Large Shield',      slot:'shield', ac:2, price:150, eq:['FIG','PRI','SAM','LOR','NIN'] },
+  { id:'shield1',     name:'Large Shield +1',   slot:'shield', ac:3, price:1500, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'shield2',     name:'Large Shield +2',   slot:'shield', ac:4, price:15000, eq:['FIG','SAM','LOR','NIN'] },
 
-    function renderGrid() {
-      gridEl.innerHTML = "";
-      let aliveCount = 0;
-      for (let r=0; r<size; r++) {
-        for (let c=0; c<size; c++) {
-          const div = document.createElement("div");
-          div.classList.add("cell");
-          if (grid[r][c] === 1) {
-            div.classList.add("alive");
-            aliveCount++;
-          }
-          gridEl.appendChild(div);
+  // HELMS
+  { id:'helm',        name:'Helmet',            slot:'helm', ac:1, price:100,  eq:['FIG','PRI','BIS','SAM','LOR','NIN'] },
+  { id:'helm1',       name:'Helm +1',           slot:'helm', ac:2, price:3000, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'helm2',       name:'Helm +2',           slot:'helm', ac:3, price:30000, eq:['FIG','SAM','LOR','NIN'] },
+
+  // GAUNTLETS
+  { id:'gaunt',       name:'Gauntlets',         slot:'gauntlet', ac:1, price:6000, eq:['FIG','SAM','LOR','NIN'] },
+  { id:'gaunt2',      name:'Gauntlets +2',      slot:'gauntlet', ac:2, price:60000, eq:['FIG','SAM','LOR','NIN'] },
+];
+
+const ITEM_BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+
+const MONSTERS = [
+  // FLOOR 1
+  { name:'Bubbly Slime',       floor:1, hp:[1,4],  ac:9, dmg:[[1,4]],  xp:55,   gold:[0,4],  abilities:[{kind:'level_drain', chance:0.05}] },
+  { name:'Orc',                floor:1, hp:[1,8],  ac:6, dmg:[[1,8]],  xp:235,  gold:[0,8],  count:[1,3] },
+  { name:'Kobold',             floor:1, hp:[1,4],  ac:7, dmg:[[1,4]],  xp:45,   gold:[0,5],  count:[1,4] },
+  { name:'Undead Kobold',      floor:1, hp:[1,6],  ac:8, dmg:[[1,4]],  xp:110,  gold:[0,3],  undead:true, count:[1,2] },
+  { name:'Bushwacker',         floor:1, hp:[1,4],  ac:6, dmg:[[1,4]],  xp:130,  gold:[1,10], count:[1,3] },
+  { name:'Rogue',              floor:1, hp:[1,8],  ac:6, dmg:[[1,6]],  xp:315,  gold:[3,15], count:[1,3] },
+  { name:"Murphy's Ghost",     floor:1, hp:[3,10], ac:5, dmg:[[1,10]], xp:4450, gold:[0,0],  undead:true, rare:true },
+  // FLOOR 2
+  { name:'Gas Cloud',          floor:2, hp:[2,6],  ac:4, dmg:[[1,4]],  xp:270,  gold:[1,8],  abilities:[{kind:'poisonHit', chance:0.15}] },
+  { name:'Creeping Coins',     floor:2, hp:[1,10], ac:6, dmg:[[1,6]],  xp:520,  gold:[20,60] },
+  { name:'Vorpal Bunny',       floor:2, hp:[1,8],  ac:7, dmg:[[1,4]],  xp:735,  gold:[0,10], abilities:[{kind:'critical', chance:0.03}] },
+  { name:'Highwayman',         floor:2, hp:[2,8],  ac:5, dmg:[[1,8]],  xp:520,  gold:[8,30], count:[1,3] },
+  { name:'Zombie',             floor:2, hp:[2,8],  ac:8, dmg:[[1,8]],  xp:520,  gold:[0,6],  undead:true, count:[1,3] },
+  // FLOOR 3
+  { name:'Grave Mist',         floor:3, hp:[2,8],  ac:5, dmg:[[1,8]],  xp:590,  gold:[5,20], undead:true, abilities:[{kind:'level_drain', chance:0.08}] },
+  { name:'Wererat',            floor:3, hp:[3,8],  ac:4, dmg:[[1,6],[1,6]], xp:1145, gold:[5,25], count:[1,3] },
+  { name:'Boring Beetle',      floor:3, hp:[3,8],  ac:5, dmg:[[1,10]], xp:735,  gold:[3,20] },
+  { name:'Coyote',             floor:3, hp:[2,8],  ac:5, dmg:[[1,8]],  xp:520,  gold:[0,10], count:[1,4] },
+  // FLOOR 4
+  { name:'Priestess',          floor:4, hp:[3,8],  ac:4, dmg:[[1,6]],  xp:1360, gold:[15,40], spellcaster:'priest', spellLvl:2 },
+  { name:'Master Ninja',       floor:4, hp:[3,10], ac:2, dmg:[[1,8],[1,8]], xp:2340, gold:[10,50], abilities:[{kind:'critical', chance:0.06}] },
+  { name:'Huge Spider',        floor:4, hp:[4,8],  ac:5, dmg:[[1,10]], xp:1520, gold:[10,30], abilities:[{kind:'poisonHit', chance:0.25}] },
+  { name:'Attack Dog',         floor:4, hp:[3,8],  ac:6, dmg:[[1,8]],  xp:735,  gold:[0,15], count:[1,3] },
+  // FLOOR 5
+  { name:'Chimera',            floor:5, hp:[9,8],  ac:2, dmg:[[1,8],[1,8],[2,8]], xp:5000, gold:[100,300] },
+  { name:'Grave Bishop',       floor:5, hp:[5,8],  ac:3, dmg:[[1,6]],  xp:3200, gold:[40,120], spellcaster:'priest', spellLvl:3 },
+  { name:'Fire Giant',         floor:5, hp:[9,8],  ac:2, dmg:[[3,10]], xp:6200, gold:[80,200] },
+  { name:'Weretiger',          floor:5, hp:[6,8],  ac:2, dmg:[[1,8],[1,8]], xp:3480, gold:[30,90] },
+  // FLOOR 6
+  { name:'Master Thief',       floor:6, hp:[6,10], ac:2, dmg:[[1,8],[1,8]], xp:5540, gold:[150,400] },
+  { name:'Poison Giant',       floor:6, hp:[8,8],  ac:2, dmg:[[3,8]],  xp:7000, gold:[50,200], abilities:[{kind:'poisonHit', chance:0.35}] },
+  { name:'Lifestealer',        floor:6, hp:[8,8],  ac:1, dmg:[[1,10]], xp:9200, gold:[80,220], undead:true, abilities:[{kind:'level_drain', chance:0.30}] },
+  // FLOOR 7
+  { name:'Bleeb',              floor:7, hp:[6,10], ac:2, dmg:[[2,10]], xp:6800, gold:[100,300] },
+  { name:'High Ninja',         floor:7, hp:[9,10], ac:0, dmg:[[2,8],[2,8]], xp:11000, gold:[100,400], abilities:[{kind:'critical', chance:0.10}] },
+  { name:'High Priest',        floor:7, hp:[8,8],  ac:3, dmg:[[1,8]],  xp:9500, gold:[150,400], spellcaster:'priest', spellLvl:5 },
+  // FLOOR 8
+  { name:'Frost Giant',        floor:8, hp:[10,10],ac:2, dmg:[[3,12]], xp:12000,gold:[200,500] },
+  { name:'Fire Dragon',        floor:8, hp:[12,10],ac:1, dmg:[[2,8],[2,8],[3,10]], xp:16000, gold:[300,900], abilities:[{kind:'breath', dmg:[10,60]}] },
+  { name:'Air Giant',          floor:8, hp:[10,10],ac:2, dmg:[[3,10]], xp:11000,gold:[150,400] },
+  { name:'Vampire',            floor:8, hp:[10,10],ac:0, dmg:[[1,10]], xp:22000,gold:[400,1200], undead:true, abilities:[{kind:'level_drain', chance:0.5}] },
+  // FLOOR 9
+  { name:'Maelific',           floor:9, hp:[12,12],ac:0, dmg:[[2,10]], xp:20000,gold:[400,1400], spellcaster:'mage', spellLvl:6 },
+  { name:'Arch Mage',          floor:9, hp:[10,10],ac:2, dmg:[[1,8]],  xp:18000,gold:[400,1200], spellcaster:'mage', spellLvl:5 },
+  { name:'Vampire Lord',       floor:9, hp:[13,12],ac:-1,dmg:[[2,10]], xp:32000,gold:[700,2000], undead:true, abilities:[{kind:'level_drain', chance:0.7}] },
+  // FLOOR 10
+  { name:'Fiend',              floor:10, hp:[14,12], ac:0, dmg:[[3,10]], xp:28000, gold:[500,2000], abilities:[{kind:'breath', dmg:[20,100]}] },
+  { name:'Raver Lord',         floor:10, hp:[15,12], ac:-2,dmg:[[3,10],[3,10]], xp:44000, gold:[900,2500] },
+  { name:'The High Guard',     floor:10, hp:[12,10], ac:-1,dmg:[[2,10],[2,10]], xp:22000, gold:[400,1200], count:[2,4] },
+  // BOSS
+  { name:'Werdna',             floor:10, hp:[20,10], ac:-3, dmg:[[2,12],[2,12]], xp:150000, gold:[5000,15000],
+    boss:true, spellcaster:'mage', spellLvl:7, abilities:[{kind:'critical', chance:0.1}] },
+];
+
+const FIRST_NAMES = ['Trebor','Werdnas','Hawkwind','Skullbasher','Eldros','Morwen','Galdric','Tarn','Rondal','Balthos',
+  'Zog','Kylearan','Serten','Fenrir','Alazar','Nine','Silver','Grond','Ilya','Malika','Vala','Thom','Roland','Sindri',
+  'Larron','Prigg','Deth','Malor','Bramble','Zephyr','Odo','Kai','Ivar','Nym','Xan','Yara','Ren','Vex','Quill','Marek'];
+
+// ============================================================
+// UTILITY
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const rand = (n) => Math.floor(Math.random() * n);
+const randi = (a,b) => a + rand(b-a+1);
+const roll = (n,d) => { let s=0; for(let i=0;i<n;i++) s += 1 + rand(d); return s; };
+const pick = (arr) => arr[rand(arr.length)];
+const clamp = (n,a,b) => Math.max(a, Math.min(b, n));
+
+let LOG_LINES = [];
+function LOG(msg, cls='') {
+  LOG_LINES.push({ msg, cls });
+  if (LOG_LINES.length > 200) LOG_LINES.shift();
+  renderLog();
+}
+function renderLog() {
+  const el = $('log');
+  el.innerHTML = LOG_LINES.map(l => `<div class="${l.cls}">${l.msg}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  gold: 0,
+  location: 'CASTLE',
+  party: [],
+  selected: null,
+  floor: 1,
+  deepest: 1,
+  steps: 0,
+  encounter: null,
+  tick: 0,
+  bodies: [],
+  vault: {},
+  toggles: {
+    autoRecruit: true,
+    autoTrain:   true,
+    autoHeal:    true,
+    autoBuy:     true,
+    autoDelve:   true,
+    autoDescend: true,
+    autoCastCombat: true,
+  },
+  stats: {
+    kills: 0,
+    xpGained: 0,
+    goldEarned: 0,
+    encounters: 0,
+    deaths: 0,
+    resurrections: 0,
+    werdnaKills: 0,
+    startedAt: Date.now(),
+  },
+  prestige: {
+    amulets: 0,
+    perkGoldPct: 0,
+    perkXpPct: 0,
+    perkHpPct: 0,
+    perkClassBoost: 0,
+  },
+};
+
+// ============================================================
+// CHARACTER CREATION
+// ============================================================
+
+function rollStats(race) {
+  const base = { ...RACES[race].base };
+  let bonus = RACES[race].bonus + rand(6);
+  if (Math.random() < 0.10) bonus += 10;
+  if (Math.random() < 0.02) bonus += 10;
+  const keys = ['STR','IQ','PIE','VIT','AGI','LUC'];
+  while (bonus > 0) {
+    const k = pick(keys);
+    if (base[k] < 18) { base[k]++; bonus--; }
+  }
+  return base;
+}
+
+function classesForStats(stats, align) {
+  const out = [];
+  for (const [cn, c] of Object.entries(CLASSES)) {
+    if (!c.alignAllow.includes(align)) continue;
+    let ok = true;
+    for (const [k,v] of Object.entries(c.req)) if (stats[k] < v) { ok=false; break; }
+    if (ok) out.push(cn);
+  }
+  return out;
+}
+
+function chooseBestClass(possible) {
+  const rank = { Ninja:100, Lord:90, Samurai:80, Bishop:70, Priest:60, Mage:55, Fighter:50, Thief:40 };
+  possible.sort((a,b) => (rank[b]||0) - (rank[a]||0));
+  return possible[0];
+}
+
+function makeCharacter(nameOverride, classPref) {
+  // Try to actually satisfy classPref by re-rolling a few times
+  let race, align, stats, possible;
+  for (let attempts=0; attempts<8; attempts++) {
+    race = pick(Object.keys(RACES));
+    align = pick(['G','N','E']);
+    stats = rollStats(race);
+    possible = classesForStats(stats, align);
+    if (classPref && possible.includes(classPref)) break;
+    if (!classPref && possible.length) break;
+  }
+  if (!possible.length) possible = ['Fighter']; // fallback
+  let cls;
+  if (classPref && possible.includes(classPref)) cls = classPref;
+  else cls = chooseBestClass(possible);
+  const cdef = CLASSES[cls];
+  let hp = Math.max(cdef.hpDie, roll(1, cdef.hpDie) + Math.floor(stats.VIT/4));
+  hp = Math.floor(hp * (1 + state.prestige.perkHpPct));
+
+  const char = {
+    id: Math.random().toString(36).slice(2,9),
+    name: nameOverride || pick(FIRST_NAMES),
+    race, align, cls, stats,
+    lvl: 1, xp: 0,
+    hp, maxHp: hp,
+    status: 'OK',
+    ac: 10,
+    mp: emptyMp(),
+    maxMp: emptyMp(),
+    knownSpells: [],
+    equipment: { weapon:null, armor:null, shield:null, helm:null, gauntlet:null },
+    poisonTicks: 0,
+  };
+  initSpells(char);
+  recomputeMp(char);
+  recomputeAc(char);
+  return char;
+}
+
+function emptyMp() {
+  return { mage:[0,0,0,0,0,0,0], priest:[0,0,0,0,0,0,0] };
+}
+
+function initSpells(c) {
+  const school = CLASSES[c.cls].spells;
+  if (!school) return;
+  if (school === 'mage' || school === 'both') {
+    for (const s of SPELL_LEVEL_INDEX.mage[1] || []) c.knownSpells.push(s);
+  }
+  if (school === 'priest' || school === 'both') {
+    for (const s of SPELL_LEVEL_INDEX.priest[1] || []) c.knownSpells.push(s);
+  }
+}
+
+function recomputeMp(c) {
+  const school = CLASSES[c.cls].spells;
+  if (!school) return;
+  const schools = school === 'both' ? ['mage','priest'] : [school];
+  for (const sch of schools) {
+    for (let sl=1; sl<=7; sl++) {
+      let offset;
+      const cls = c.cls;
+      if (cls === 'Bishop') offset = sch === 'mage' ? 4 : 3;
+      else if (cls === 'Samurai') offset = 4;
+      else if (cls === 'Lord') offset = 4;
+      else offset = 1;
+      const casts = clamp(Math.floor((c.lvl - offset - (sl-1)*2 + 2)), 0, 9);
+      const shouldKnow = c.lvl >= offset + (sl-1)*2;
+      c.maxMp[sch][sl-1] = shouldKnow ? Math.max(0, casts) : 0;
+      c.mp[sch][sl-1] = Math.min(c.mp[sch][sl-1], c.maxMp[sch][sl-1]);
+      if (shouldKnow) {
+        for (const spell of SPELL_LEVEL_INDEX[sch][sl] || []) {
+          if (!c.knownSpells.includes(spell)) c.knownSpells.push(spell);
         }
       }
-      document.getElementById('gardenStatus').textContent = `Active Cells: ${aliveCount}`;
-      checkGardenWin(aliveCount);
     }
+  }
+}
 
-    function stepLife() {
-      let newGrid = Array(size).fill().map(()=>Array(size).fill(0));
-      for (let r=0; r<size; r++) {
-        for (let c=0; c<size; c++) {
-          let neighbors = 0;
-          for (let dr=-1; dr<=1; dr++) {
-            for (let dc=-1; dc<=1; dc++) {
-              if (dr===0 && dc===0) continue;
-              let nr = r+dr, nc=c+dc;
-              if (nr>=0 && nr<size && nc>=0 && nc<size) {
-                neighbors += grid[nr][nc];
-              }
-            }
-          }
-          if (grid[r][c]===1 && (neighbors===2 || neighbors===3)) newGrid[r][c]=1;
-          if (grid[r][c]===0 && neighbors===3) newGrid[r][c]=1;
+function recomputeAc(c) {
+  let ac = 10;
+  for (const slot of ['armor','shield','helm','gauntlet']) {
+    const it = c.equipment[slot];
+    if (it && ITEM_BY_ID[it]) ac -= (ITEM_BY_ID[it].ac || 0);
+  }
+  if (c.stats.AGI >= 15) ac -= Math.floor((c.stats.AGI - 14)/2);
+  c.ac = ac;
+}
+
+function isFrontRow(idx) { return idx < 3; }
+
+// ============================================================
+// COMBAT
+// ============================================================
+
+function attemptToHit(attackerBab, targetAc) {
+  const r = 1 + rand(20);
+  return r + attackerBab >= 10 + targetAc;
+}
+
+function charBab(c) {
+  const classBab = { Fighter:1.0, Samurai:1.0, Lord:0.9, Ninja:0.9, Priest:0.7, Bishop:0.6, Thief:0.7, Mage:0.5 };
+  let bab = Math.floor((c.lvl) * (classBab[c.cls] || 0.5));
+  if (c.stats.STR >= 16) bab += 1;
+  if (c.stats.STR >= 18) bab += 1;
+  return bab;
+}
+
+function charWeaponDmg(c) {
+  const w = c.equipment.weapon ? ITEM_BY_ID[c.equipment.weapon] : null;
+  if (!w) return roll(1,3);
+  let d = roll(w.dmg[0], w.dmg[1]);
+  if (c.stats.STR >= 16) d += 1;
+  if (c.stats.STR >= 18) d += 2;
+  if (c.cls === 'Ninja') d += Math.floor(c.lvl/3);
+  return d;
+}
+
+function pickTargetPartyMelee() {
+  const front = state.party.slice(0,3).filter(c => c && isAlive(c));
+  if (front.length) return front[rand(front.length)];
+  const back = state.party.slice(3,6).filter(c => c && isAlive(c));
+  if (back.length) return back[rand(back.length)];
+  return null;
+}
+
+function pickTargetEnemy() {
+  const alive = state.encounter.monsters.filter(m => m.hp > 0);
+  if (!alive.length) return null;
+  return alive[rand(alive.length)];
+}
+
+function isAlive(c) { return c && c.hp > 0 && !['DEAD','ASHES','LOST'].includes(c.status); }
+function isCasting(c) { return c && CLASSES[c.cls].spells; }
+
+function startEncounter(monsterList) {
+  state.encounter = {
+    monsters: monsterList,
+    round: 0,
+  };
+  state.stats.encounters++;
+  const groups = monsterList.reduce((a,m)=>{a[m.name]=(a[m.name]||0)+1; return a;},{});
+  const label = Object.entries(groups).map(([n,c])=>c>1?`${c} ${n}s`:`1 ${n}`).join(', ');
+  LOG(`<span class="encounter">! Encounter:</span> ${label}`, monsterList[0].boss ? 'werdna' : (monsterList[0].rare?'rare':''));
+}
+
+function rollMonstersForFloor(floor) {
+  const pool = MONSTERS.filter(m => m.floor <= floor && m.floor >= Math.max(1, floor-2) && !m.boss);
+  const base = pick(pool);
+  const cnt = base.count ? randi(base.count[0], base.count[1]) : 1;
+  const arr = [];
+  for (let i=0;i<cnt;i++) arr.push(spawnMonster(base));
+  if (floor === 1 && Math.random() < 0.03) arr.push(spawnMonster(MONSTERS.find(m=>m.name==="Murphy's Ghost")));
+  return arr;
+}
+
+function spawnMonster(def) {
+  return {
+    name: def.name,
+    hp: roll(def.hp[0], def.hp[1]),
+    ac: def.ac,
+    dmg: def.dmg,
+    xp: def.xp,
+    gold: def.gold,
+    undead: !!def.undead,
+    boss: !!def.boss,
+    rare: !!def.rare,
+    abilities: def.abilities || [],
+    spellcaster: def.spellcaster || null,
+    spellLvl: def.spellLvl || 0,
+    status: 'OK',
+    _asleepRounds: 0,
+  };
+}
+
+function spawnWerdna() {
+  const werdna = spawnMonster(MONSTERS.find(m => m.boss));
+  const highGuardDef = MONSTERS.find(m => m.name === 'The High Guard');
+  const arr = [werdna];
+  const guards = randi(highGuardDef.count[0], highGuardDef.count[1]);
+  for (let i=0;i<guards;i++) arr.push(spawnMonster(highGuardDef));
+  return arr;
+}
+
+function chooseAttackSpell(caster) {
+  const priorities = ['TILTOWAIT','MALIKTO','MADALTO','LAHALITO','MAHALITO','LITOKAN','BARIKO','BADIALMA','BADIAL','HALITO','BADIOS'];
+  for (const sp of priorities) {
+    const s = SPELLS[sp];
+    if (!s) continue;
+    if (!caster.knownSpells.includes(sp)) continue;
+    if (caster.mp[s.school][s.level-1] > 0) return sp;
+  }
+  return null;
+}
+
+function chooseHealSpell(caster) {
+  const wounded = state.party.filter(c => isAlive(c) && c.hp < c.maxHp);
+  if (!wounded.length) return null;
+  const priorities = ['MADI','DIALMA','DIAL','DIOS'];
+  const heavy = wounded.some(c => c.hp / c.maxHp < 0.4);
+  for (const sp of priorities) {
+    if (!heavy && ['MADI','DIALMA'].includes(sp)) continue;
+    const s = SPELLS[sp];
+    if (!s) continue;
+    if (!caster.knownSpells.includes(sp)) continue;
+    if (caster.mp[s.school][s.level-1] > 0) {
+      wounded.sort((a,b) => (a.hp/a.maxHp) - (b.hp/b.maxHp));
+      return { spell: sp, target: wounded[0] };
+    }
+  }
+  return null;
+}
+
+function combatRound() {
+  if (!state.encounter) return;
+  state.encounter.round++;
+  const r = state.encounter.round;
+
+  for (let i=0;i<6;i++) {
+    const c = state.party[i];
+    if (!isAlive(c)) continue;
+    if (c.status === 'ASLEEP' || c.status === 'PARALYZED') continue;
+
+    if (state.encounter.monsters.some(m => m.hp > 0)) {
+      if (isCasting(c) && state.toggles.autoCastCombat) {
+        const heal = chooseHealSpell(c);
+        if (heal && state.party.some(a => isAlive(a) && a.hp/a.maxHp < 0.4)) {
+          castSpell(c, heal.spell, heal.target);
+          continue;
+        }
+        const atk = chooseAttackSpell(c);
+        if (atk && (!isFrontRow(i) || Math.random() < 0.4)) {
+          castSpell(c, atk, null);
+          continue;
         }
       }
-      grid = newGrid;
-      renderGrid();
-    }
-
-    function placeCell() {
-      let empty = [];
-      for (let r=0; r<size; r++) {
-        for (let c=0; c<size; c++) {
-          if (grid[r][c]===0) empty.push([r,c]);
-        }
-      }
-      if (empty.length>0) {
-        const [r,c] = empty[Math.floor(Math.random()*empty.length)];
-        grid[r][c]=1;
-        renderGrid();
-      }
-    }
-
-    function checkGardenWin(aliveCount) {
-      // Victory Condition 1: 50+ cells alive at once
-      if (aliveCount >= 50) {
-        alert("🌿 Your Mycelium Network conquered the garden!");
-        energy += 500;
-        evolutions++;
-        multiplier += 1;
-        resetGarden();
-      }
-
-      // Victory Condition 2: survive 30s with >= 10 cells
-      if (aliveCount >= 10) {
-        survivalTime++;
-        if (survivalTime >= 30) {
-          alert("🧬 Stable symbiosis achieved!");
-          evolutions++;
-          multiplier += 1;
-          energy += 300;
-          resetGarden();
-        }
+      if (isFrontRow(i) || c.cls === 'Thief' || c.cls === 'Ninja') {
+        meleeAttack(c);
       } else {
-        survivalTime = 0;
+        const target = pickTargetEnemy();
+        if (target && Math.random() < 0.4) {
+          const dmg = randi(1,4) + Math.floor(c.stats.AGI/6);
+          target.hp -= dmg;
+          LOG(`${c.name} shoots ${target.name} for <span class="warn">${dmg}</span>.`);
+          if (target.hp <= 0) killMonster(target);
+        }
       }
     }
+  }
 
-    function resetGarden() {
-      grid = Array(size).fill().map(()=>Array(size).fill(0));
-      survivalTime = 0;
-      renderGrid();
+  for (const m of state.encounter.monsters) {
+    if (m.hp <= 0) continue;
+    if (m._asleepRounds > 0) { m._asleepRounds--; continue; }
+    if (m.spellcaster && Math.random() < 0.4) {
+      const spells = (SPELL_LEVEL_INDEX[m.spellcaster][clamp(m.spellLvl,1,7)] || SPELL_LEVEL_INDEX[m.spellcaster][1]);
+      const spName = pick(spells);
+      const sp = SPELLS[spName];
+      if (sp && sp.dmg) {
+        const alive = state.party.filter(c => isAlive(c));
+        if (alive.length) {
+          const target = pick(alive);
+          const d = roll(sp.dmg[0], sp.dmg[1]);
+          const dmg = Math.max(1, Math.floor(d));
+          target.hp -= dmg;
+          LOG(`<span class="warn">${m.name} casts ${spName}</span> - ${target.name} takes ${dmg}.`);
+          checkKO(target);
+          continue;
+        }
+      }
     }
+    const breath = (m.abilities||[]).find(a=>a.kind==='breath');
+    if (breath && Math.random() < 0.25) {
+      const alive = state.party.filter(c => isAlive(c));
+      LOG(`<span class="warn">${m.name} breathes destruction!</span>`);
+      for (const c of alive) {
+        const d = roll(breath.dmg[0], breath.dmg[1]);
+        c.hp -= d;
+        LOG(`  ${c.name} takes ${d}.`);
+        checkKO(c);
+      }
+      continue;
+    }
+    for (const atk of m.dmg) {
+      const target = pickTargetPartyMelee();
+      if (!target) break;
+      if (attemptToHit(2 + Math.floor((m.xp||0)/2000), -target.ac)) {
+        let dmg = roll(atk[0], atk[1]);
+        const crit = (m.abilities||[]).find(a=>a.kind==='critical');
+        if (crit && Math.random() < crit.chance) {
+          LOG(`<span class="bad">Critical hit!</span> ${target.name} is decapitated by ${m.name}!`);
+          target.hp = 0;
+          killChar(target);
+          continue;
+        }
+        target.hp -= dmg;
+        LOG(`${m.name} hits ${target.name} for <span class="bad">${dmg}</span>.`);
+        const poison = (m.abilities||[]).find(a=>a.kind==='poisonHit');
+        if (poison && Math.random() < poison.chance && target.status === 'OK') {
+          target.status = 'POISONED';
+          target.poisonTicks = 6;
+          LOG(`  ${target.name} is <span class="warn">POISONED</span>.`);
+        }
+        const drain = (m.abilities||[]).find(a=>a.kind==='level_drain');
+        if (drain && Math.random() < drain.chance && target.lvl > 1) {
+          target.lvl--;
+          target.xp = Math.max(0, xpForLevel(target.cls, target.lvl) - 1);
+          LOG(`  <span class="bad">${target.name} loses a level!</span>`);
+        }
+        checkKO(target);
+      } else {
+        LOG(`${m.name} misses ${target.name}.`);
+      }
+    }
+  }
 
-    setInterval(stepLife, 1000);
-    renderGrid();
-  </script>
+  const anyMonsterAlive = state.encounter.monsters.some(m => m.hp > 0);
+  const anyPartyAlive = state.party.some(c => isAlive(c));
+
+  if (!anyMonsterAlive) return finishEncounter('victory');
+  if (!anyPartyAlive) return finishEncounter('tpk');
+  if (r > 40) return finishEncounter('flee');
+}
+
+function meleeAttack(c) {
+  const target = pickTargetEnemy();
+  if (!target) return;
+  const bab = charBab(c);
+  let nSw = 1;
+  if (c.cls === 'Fighter' && c.lvl >= 5) nSw = 2;
+  if (c.cls === 'Samurai' && c.lvl >= 6) nSw = 2;
+  if (c.cls === 'Lord' && c.lvl >= 7) nSw = 2;
+  if (c.cls === 'Ninja' && c.lvl >= 4) nSw = 2;
+  if (c.cls === 'Fighter' && c.lvl >= 10) nSw = 3;
+  if (c.cls === 'Samurai' && c.lvl >= 11) nSw = 3;
+  if (c.cls === 'Ninja' && c.lvl >= 8) nSw = 3;
+
+  for (let s=0;s<nSw;s++) {
+    if (target.hp <= 0) break;
+    if (attemptToHit(bab, -target.ac)) {
+      const dmg = charWeaponDmg(c);
+      target.hp -= dmg;
+      LOG(`${c.name} hits ${target.name} for <span class="good">${dmg}</span>.`);
+      if ((c.cls==='Ninja' && Math.random() < 0.04) ||
+          (c.cls==='Samurai' && Math.random() < 0.02) ||
+          (c.cls==='Fighter' && Math.random() < 0.005)) {
+        LOG(`<span class="good">${c.name} strikes a killing blow!</span>`);
+        target.hp = 0;
+      }
+      if (target.hp <= 0) killMonster(target);
+    } else {
+      LOG(`${c.name} swings at ${target.name} - miss.`);
+    }
+  }
+}
+
+function castSpell(c, spellName, targetOverride) {
+  const s = SPELLS[spellName];
+  if (!s) return;
+  if (c.mp[s.school][s.level-1] <= 0) return;
+  c.mp[s.school][s.level-1]--;
+  LOG(`<span class="hi">${c.name} casts ${spellName}</span> (${s.desc}).`);
+
+  if (s.target === 'oneEnemy') {
+    const target = pickTargetEnemy();
+    if (!target) return;
+    const dmg = roll(s.dmg[0], s.dmg[1]);
+    target.hp -= dmg;
+    LOG(`  ${target.name} takes <span class="good">${dmg}</span>.`);
+    if (target.hp <= 0) killMonster(target);
+  } else if (s.target === 'groupEnemy') {
+    if (s.dmg) {
+      for (const m of state.encounter.monsters) {
+        if (m.hp <= 0) continue;
+        const dmg = roll(s.dmg[0], s.dmg[1]);
+        m.hp -= dmg;
+        LOG(`  ${m.name} takes <span class="good">${dmg}</span>.`);
+        if (m.hp <= 0) killMonster(m);
+      }
+    }
+    if (s.status === 'ASLEEP') {
+      for (const m of state.encounter.monsters) {
+        if (m.hp <= 0) continue;
+        if (Math.random() < 0.6) { m._asleepRounds = 2 + rand(3); LOG(`  ${m.name} <span class="warn">falls asleep</span>.`); }
+      }
+    }
+  } else if (s.target === 'allEnemies') {
+    if (spellName === 'TILTOWAIT' || spellName === 'MALIKTO') {
+      for (const m of state.encounter.monsters) {
+        if (m.hp <= 0) continue;
+        const dmg = roll(s.dmg[0], s.dmg[1]);
+        m.hp -= dmg;
+        LOG(`  ${m.name} smote for <span class="good">${dmg}</span>.`);
+        if (m.hp <= 0) killMonster(m);
+      }
+    } else if (spellName === 'MAKANITO') {
+      for (const m of state.encounter.monsters) {
+        if (m.hp <= 0) continue;
+        if ((m.xp || 0) < 4000) { m.hp = 0; LOG(`  ${m.name} suffocates.`); killMonster(m); }
+      }
+    }
+  } else if (s.target === 'oneAlly') {
+    const target = targetOverride || c;
+    if (s.heal) {
+      const h = roll(s.heal[0], s.heal[1]);
+      target.hp = Math.min(target.maxHp, target.hp + h);
+      LOG(`  ${target.name} heals ${h}.`);
+    } else if (s.effect === 'fullheal') {
+      target.hp = target.maxHp;
+      LOG(`  ${target.name} restored to full.`);
+    } else if (s.effect === 'resurrect') {
+      if (target.status === 'DEAD' || target.status === 'ASHES') {
+        target.status = 'OK';
+        target.hp = Math.max(1, Math.floor(target.maxHp/2));
+        LOG(`<span class="good">  ${target.name} returns to life!</span>`);
+      }
+    }
+  } else if (s.target === 'self') {
+    if (s.ac) { c.ac += s.ac; LOG(`  ${c.name} shimmers.`); }
+  } else if (s.target === 'party') {
+    if (s.ac) { for (const a of state.party) if (a) a.ac += s.ac; }
+  }
+}
+
+function killMonster(m) {
+  LOG(`<span class="good">The ${m.name} is slain!</span>`);
+  state.stats.kills++;
+}
+
+function checkKO(c) {
+  if (c.hp <= 0 && c.status !== 'DEAD') killChar(c);
+}
+
+function killChar(c) {
+  c.hp = 0;
+  c.status = 'DEAD';
+  state.stats.deaths++;
+  LOG(`<span class="bad">${c.name} has been slain.</span>`);
+}
+
+function finishEncounter(outcome) {
+  const enc = state.encounter;
+  state.encounter = null;
+
+  if (outcome === 'victory') {
+    let totalXp = 0, totalGold = 0;
+    let hadWerdna = false;
+    for (const m of enc.monsters) {
+      totalXp += m.xp || 0;
+      const g = m.gold ? randi(m.gold[0], m.gold[1]) : 0;
+      totalGold += g;
+      if (m.boss) hadWerdna = true;
+    }
+    const alive = state.party.filter(c => isAlive(c));
+    const share = alive.length ? Math.floor(totalXp / alive.length) : 0;
+    const xpMul = 1 + state.prestige.perkXpPct;
+    const goldMul = 1 + state.prestige.perkGoldPct;
+    const shareFinal = Math.floor(share * xpMul);
+    const goldFinal = Math.floor(totalGold * goldMul);
+    for (const c of alive) c.xp += shareFinal;
+    state.gold += goldFinal;
+    state.stats.xpGained += shareFinal * alive.length;
+    state.stats.goldEarned += goldFinal;
+    LOG(`<span class="good">Victory!</span> Each survivor gains <span class="hi">${shareFinal}</span> XP. Party gains <span class="gold">${goldFinal}</span> gold.`);
+
+    if (hadWerdna) onWerdnaDefeated();
+  } else if (outcome === 'tpk') {
+    LOG(`<span class="bad">TPK!</span> The party has fallen. Their bodies are lost in the maze.`);
+    for (const c of state.party) if (c) { c.status = 'DEAD'; }
+    state.bodies.push(...state.party.filter(Boolean));
+    state.party = [];
+    goToLocation('CASTLE');
+  } else if (outcome === 'flee') {
+    LOG(`<span class="warn">The party flees the encounter.</span>`);
+    goToLocation('CASTLE');
+  }
+}
+
+// ============================================================
+// LEVEL UP
+// ============================================================
+function tryLevelUp(c) {
+  const need = xpForLevel(c.cls, c.lvl + 1);
+  if (c.xp < need) return false;
+  c.lvl++;
+  const gain = Math.max(1, roll(1, CLASSES[c.cls].hpDie) + Math.floor(c.stats.VIT/6));
+  const boosted = Math.floor(gain * (1 + state.prestige.perkHpPct + state.prestige.perkClassBoost));
+  c.maxHp += boosted;
+  c.hp = c.maxHp;
+  recomputeMp(c);
+  recomputeAc(c);
+  LOG(`<span class="good">${c.name} reaches level ${c.lvl}!</span> (+${boosted} HP)`);
+  return true;
+}
+
+// ============================================================
+// TOWN ACTIONS
+// ============================================================
+
+function templeHealAll() {
+  let total = 0;
+  for (let i=0;i<state.party.length;i++) {
+    const c = state.party[i];
+    if (!c) continue;
+    if (c.status === 'POISONED' && state.gold >= 100) { c.status = 'OK'; total += 100; state.gold -= 100; }
+    if (c.status === 'ASLEEP' || c.status === 'PARALYZED' || c.status === 'AFRAID') c.status = 'OK';
+    if (c.status === 'DEAD') {
+      const cost = 100 * c.lvl;
+      if (state.gold >= cost) {
+        state.gold -= cost;
+        c.status = 'OK';
+        c.hp = c.maxHp;
+        state.stats.resurrections++;
+        LOG(`Temple of Cant revives ${c.name} (<span class="gold">${cost}</span>g).`);
+      } else {
+        c._graveTicks = (c._graveTicks || 0) + 1;
+        if (c._graveTicks > 8) {
+          LOG(`<span class="bad">${c.name}'s body could not be recovered. Buried in the pauper's field.</span>`);
+          for (const slot of Object.keys(c.equipment)) {
+            const id = c.equipment[slot];
+            if (id) state.vault[id] = (state.vault[id]||0) + 1;
+          }
+          state.party.splice(i, 1);
+          i--;
+        }
+        continue;
+      }
+    }
+    if (c.status === 'ASHES') {
+      const cost = 250 * c.lvl;
+      if (state.gold >= cost) {
+        state.gold -= cost;
+        c.status = 'OK';
+        c.hp = c.maxHp;
+        state.stats.resurrections++;
+        LOG(`Temple of Cant restores ashes of ${c.name} (<span class="gold">${cost}</span>g).`);
+      } else { continue; }
+    }
+    if (c.hp < c.maxHp) {
+      const need = c.maxHp - c.hp;
+      if (state.gold >= need) {
+        state.gold -= need;
+        c.hp = c.maxHp;
+        total += need;
+      } else {
+        c.hp += state.gold;
+        state.gold = 0;
+      }
+    }
+    if (CLASSES[c.cls].spells) {
+      c.mp = { mage: c.maxMp.mage.slice(), priest: c.maxMp.priest.slice() };
+    }
+  }
+  if (total > 0) LOG(`Temple heals cost <span class="gold">${total}</span>g.`);
+}
+
+function retrieveBodies() {
+  if (state.bodies.length === 0) { LOG(`No bodies to recover.`); return; }
+  const toMove = [];
+  while (state.bodies.length > 0 && state.party.length < 6) {
+    toMove.push(state.bodies.shift());
+  }
+  for (const b of toMove) state.party.push(b);
+  LOG(`Recovered ${toMove.length} bodies from the maze.`);
+}
+
+function recruit(classPref) {
+  if (state.party.length >= 6) return;
+  const c = makeCharacter(null, classPref);
+  state.party.push(c);
+  LOG(`Recruited <span class="hi">${c.name}</span> the ${c.race} ${c.cls}.`);
+  autoEquipBest(c);
+}
+
+function dismissSelected() {
+  if (state.selected == null) return;
+  const c = state.party[state.selected];
+  if (!c) return;
+  LOG(`Dismissed ${c.name}.`);
+  for (const slot of Object.keys(c.equipment)) {
+    const id = c.equipment[slot];
+    if (id) { state.vault[id] = (state.vault[id]||0) + 1; c.equipment[slot] = null; }
+  }
+  state.party.splice(state.selected, 1);
+  state.selected = null;
+}
+
+function boltacShopping() {
+  const slots = ['weapon','armor','shield','helm','gauntlet'];
+  for (const c of state.party) {
+    if (!c || !isAlive(c)) continue;
+    for (const slot of slots) {
+      const cur = c.equipment[slot];
+      const curItem = cur ? ITEM_BY_ID[cur] : null;
+      const options = ITEMS.filter(it => it.slot === slot && canEquip(c, it) && it.price <= state.gold);
+      const better = options.filter(it => {
+        if (slot === 'weapon') {
+          const cd = curItem ? curItem.dmg[0]*curItem.dmg[1] : 0;
+          return it.dmg[0]*it.dmg[1] > cd;
+        }
+        const ca = curItem ? curItem.ac || 0 : 0;
+        return (it.ac||0) > ca;
+      }).sort((a,b) => a.price - b.price);
+      if (better.length) {
+        const buy = better[0];
+        if (state.gold >= buy.price) {
+          state.gold -= buy.price;
+          if (cur) state.vault[cur] = (state.vault[cur]||0) + 1;
+          c.equipment[slot] = buy.id;
+          recomputeAc(c);
+          LOG(`Boltac's: ${c.name} equips <span class="hi">${buy.name}</span> (<span class="gold">${buy.price}</span>g).`);
+          return;
+        }
+      }
+    }
+  }
+}
+
+function canEquip(c, item) {
+  const cabbr = CLASSES[c.cls].abbrev;
+  return item.eq.includes(cabbr);
+}
+
+function autoEquipBest(c) {
+  for (const slot of ['weapon','armor','shield','helm','gauntlet']) {
+    if (c.equipment[slot]) continue;
+    for (const id of Object.keys(state.vault)) {
+      if (!state.vault[id]) continue;
+      const it = ITEM_BY_ID[id];
+      if (!it || it.slot !== slot) continue;
+      if (!canEquip(c, it)) continue;
+      c.equipment[slot] = id;
+      state.vault[id]--;
+      if (state.vault[id] <= 0) delete state.vault[id];
+      break;
+    }
+  }
+  recomputeAc(c);
+}
+
+function trainingGrounds() {
+  for (const c of state.party) {
+    if (!c || !isAlive(c)) continue;
+    while (tryLevelUp(c)) {}
+  }
+}
+
+function restInn() {
+  let total = 0;
+  for (const c of state.party) {
+    if (!c || !isAlive(c)) continue;
+    if (c.hp < c.maxHp || CLASSES[c.cls].spells) {
+      total += 10 * c.lvl;
+    }
+  }
+  if (state.gold >= total && total > 0) {
+    state.gold -= total;
+    for (const c of state.party) {
+      if (!c || !isAlive(c)) continue;
+      c.hp = c.maxHp;
+      if (CLASSES[c.cls].spells) {
+        c.mp = { mage: c.maxMp.mage.slice(), priest: c.maxMp.priest.slice() };
+      }
+    }
+    LOG(`The party rests at the Adventurer's Inn (<span class="gold">${total}</span>g).`);
+  }
+}
+
+// ============================================================
+// DUNGEON / EXPLORATION
+// ============================================================
+function goToLocation(loc) {
+  state.location = loc;
+  $('loc-name').textContent = loc;
+  if (loc === 'MAZE') {
+    LOG(`The party descends to <span class="hi">Floor B${state.floor}</span> of the Proving Grounds.`);
+  } else if (loc === 'CASTLE') {
+    LOG(`The party returns to Trebor's Castle.`);
+  }
+  render();
+}
+
+function dungeonStep() {
+  if (state.location !== 'MAZE') return;
+  state.steps++;
+  if (state.floor === 10 && state.steps % 20 === 0 && !state.encounter && state.deepest >= 10) {
+    if (state.party.every(c => c && isAlive(c) && c.hp / c.maxHp > 0.6)) {
+      LOG(`<span class="werdna">You enter Werdna's chamber...</span>`);
+      const monsters = spawnWerdna();
+      startEncounter(monsters);
+      return;
+    }
+  }
+  const rate = 0.15 + Math.min(0.20, state.floor * 0.02);
+  if (Math.random() < rate) {
+    const monsters = rollMonstersForFloor(state.floor);
+    startEncounter(monsters);
+  }
+  for (const c of state.party) {
+    if (!c || c.status !== 'POISONED') continue;
+    if (c.poisonTicks-- > 0) {
+      c.hp = Math.max(1, c.hp - 1);
+    } else {
+      c.status = 'OK';
+    }
+  }
+  if (state.toggles.autoDescend && !state.encounter && floorCleared()) {
+    if (state.floor < 10) {
+      state.floor++;
+      state.deepest = Math.max(state.deepest, state.floor);
+      LOG(`Party finds the stairs down to <span class="hi">Floor B${state.floor}</span>.`);
+    }
+  }
+}
+
+function floorCleared() {
+  const needed = 30 + state.floor * 12;
+  return state.steps > 0 && state.steps % needed === 0;
+}
+
+function returnToTownCheck() {
+  const anyDead = state.party.some(c => c && (c.status === 'DEAD' || c.status === 'ASHES'));
+  const anyHurt = state.party.some(c => c && isAlive(c) && (c.hp / c.maxHp) < 0.30);
+  const casterLow = state.party.some(c => {
+    if (!c || !CLASSES[c.cls].spells) return false;
+    const maxAll = c.maxMp.mage.reduce((a,b)=>a+b,0) + c.maxMp.priest.reduce((a,b)=>a+b,0);
+    const curAll = c.mp.mage.reduce((a,b)=>a+b,0) + c.mp.priest.reduce((a,b)=>a+b,0);
+    return maxAll > 4 && (curAll / maxAll) < 0.25;
+  });
+  return anyDead || anyHurt || casterLow;
+}
+
+// ============================================================
+// WERDNA / PRESTIGE
+// ============================================================
+function onWerdnaDefeated() {
+  state.stats.werdnaKills++;
+  state.prestige.amulets++;
+  const bonuses = [
+    () => { state.prestige.perkGoldPct += 0.10; LOG(`<span class="good">The Amulet whispers: +10% gold, forever.</span>`); },
+    () => { state.prestige.perkXpPct += 0.10; LOG(`<span class="good">The Amulet whispers: +10% XP, forever.</span>`); },
+    () => { state.prestige.perkHpPct += 0.05; LOG(`<span class="good">The Amulet whispers: +5% HP, forever.</span>`); },
+    () => { state.prestige.perkClassBoost += 0.05; LOG(`<span class="good">The Amulet whispers: heroes gain more per level.</span>`); },
+  ];
+  pick(bonuses)();
+  LOG(`<span class="werdna">WERDNA HAS FALLEN!</span> You retrieve the Amulet #${state.prestige.amulets}. Trebor rejoices.`);
+  state.floor = 1;
+  state.steps = 0;
+  for (const c of state.party) if (c) { c.hp = c.maxHp; c.status = 'OK'; }
+  goToLocation('CASTLE');
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+function render() {
+  renderParty();
+  renderCharDetail();
+  renderVault();
+  renderView();
+  renderStats();
+  renderPrestige();
+  renderToggles();
+  $('gold').textContent = Math.floor(state.gold).toLocaleString();
+  const mins = Math.floor((Date.now() - state.stats.startedAt)/60000);
+  $('playtime').textContent = `${Math.floor(mins/60)}h ${mins%60}m`;
+}
+
+function renderParty() {
+  const rows = [];
+  for (let i=0;i<6;i++) {
+    const c = state.party[i];
+    if (!c) {
+      rows.push(`<tr class="empty ${state.selected===i?'selected':''}"><td colspan="5" style="color:#334; text-align:center;">- empty slot ${i+1} (${i<3?'FRONT':'BACK'}) -</td></tr>`);
+      continue;
+    }
+    const dead = !isAlive(c);
+    const row = state.selected === i ? 'selected' : '';
+    const pct = Math.max(0, Math.min(100, Math.floor(100 * c.hp / c.maxHp)));
+    rows.push(`<tr class="${dead?'dead':''} ${row} clickable" data-idx="${i}">
+      <td>${i+1}</td>
+      <td>${c.name}<div class="dim" style="font-size:10px;">${RACES[c.race].abbrev}-${c.align} ${CLASSES[c.cls].abbrev} L${c.lvl}</div></td>
+      <td>${c.hp}/${c.maxHp}<div class="hpbar"><i style="width:${pct}%"></i></div></td>
+      <td style="text-align:center;">AC ${c.ac}</td>
+      <td>${statusTag(c)}</td>
+    </tr>`);
+  }
+  const el = $('party-table');
+  el.innerHTML = rows.join('');
+  el.querySelectorAll('tr.clickable').forEach(tr => {
+    tr.onclick = () => { state.selected = parseInt(tr.dataset.idx); render(); };
+  });
+}
+
+function statusTag(c) {
+  if (c.status === 'DEAD') return '<span class="tag dead">DEAD</span>';
+  if (c.status === 'ASHES') return '<span class="tag dead">ASHES</span>';
+  if (c.status === 'LOST') return '<span class="tag dead">LOST</span>';
+  if (c.status === 'POISONED') return '<span class="tag status">POISON</span>';
+  if (c.status === 'ASLEEP') return '<span class="tag status">ASLEEP</span>';
+  if (c.status === 'PARALYZED') return '<span class="tag status">PARAL</span>';
+  return '<span class="tag on">OK</span>';
+}
+
+function renderCharDetail() {
+  const el = $('char-detail');
+  const c = state.party[state.selected];
+  if (!c) { el.textContent = 'Click a party member.'; return; }
+  const eqLines = Object.entries(c.equipment).map(([slot, id]) => {
+    const it = id ? ITEM_BY_ID[id] : null;
+    return `<div><span class="dim">${slot.padEnd(9,' ')}</span> ${it ? it.name : '<span class="dim">-</span>'}</div>`;
+  }).join('');
+  let mpLine = '';
+  if (CLASSES[c.cls].spells) {
+    mpLine = `<div style="margin-top:4px;"><span class="dim">Mage MP:</span> ${c.mp.mage.map((v,i)=>`${v}/${c.maxMp.mage[i]}`).join(' | ')}</div>
+      <div><span class="dim">Priest MP:</span> ${c.mp.priest.map((v,i)=>`${v}/${c.maxMp.priest[i]}`).join(' | ')}</div>`;
+  }
+  const nextXp = xpForLevel(c.cls, c.lvl + 1);
+  el.innerHTML = `
+    <div class="hi">${c.name}</div>
+    <div class="dim">${c.race} ${c.align === 'G'?'Good':(c.align==='N'?'Neutral':'Evil')} ${c.cls} - Level ${c.lvl}</div>
+    <div class="kv" style="margin-top:6px;">
+      <div>HP</div><div class="stat">${c.hp}/${c.maxHp}</div>
+      <div>AC</div><div class="stat">${c.ac}</div>
+      <div>XP</div><div class="stat">${c.xp.toLocaleString()} / ${nextXp.toLocaleString()}</div>
+      <div>STR</div><div class="stat">${c.stats.STR}</div>
+      <div>IQ</div><div class="stat">${c.stats.IQ}</div>
+      <div>PIE</div><div class="stat">${c.stats.PIE}</div>
+      <div>VIT</div><div class="stat">${c.stats.VIT}</div>
+      <div>AGI</div><div class="stat">${c.stats.AGI}</div>
+      <div>LUC</div><div class="stat">${c.stats.LUC}</div>
+    </div>
+    ${mpLine}
+    <div style="margin-top:6px;"><span class="dim">Equipment</span>${eqLines}</div>
+  `;
+}
+
+function renderVault() {
+  const el = $('vault');
+  const items = Object.entries(state.vault);
+  if (items.length === 0) { el.innerHTML = `<div class="dim" style="grid-column:span 2;">Empty.</div>`; return; }
+  const parts = [];
+  for (const [id, n] of items) {
+    if (n <= 0) continue;
+    const it = ITEM_BY_ID[id];
+    parts.push(`<div>${it ? it.name : id}</div><div class="stat">x${n}</div>`);
+  }
+  el.innerHTML = parts.join('') || `<div class="dim" style="grid-column:span 2;">Empty.</div>`;
+}
+
+const MAZE_ART = String.raw`
+   +-----------+
+   |     .     |
+   |  +--|--+  |
+   |  |     |  |
+   |  |  o  |  |
+   |  |     |  |
+   |  +--|--+  |
+   |     |     |
+   +-----+-----+
+         v
+`;
+
+function renderView() {
+  const view = $('view');
+  const loc = state.location;
+  if (loc === 'CASTLE') {
+    view.innerHTML = `
+      <h2>CASTLE OF LLYLGAMYN</h2>
+      <p>Trebor's castle looms overhead. Adventurers gather to descend into the Proving Grounds and, one day, slay Werdna.</p>
+      <div class="locations">
+        <button onclick="doAction('tavern')">GILGAMESH'S TAVERN - Recruit a hero</button>
+        <button onclick="doAction('training')">TRAINING GROUNDS - Level up ready heroes</button>
+        <button onclick="doAction('temple')">TEMPLE OF CANT - Heal, Revive</button>
+        <button onclick="doAction('boltac')">BOLTAC'S TRADING POST - Buy gear</button>
+        <button onclick="doAction('inn')">ADVENTURER'S INN - Rest for MP</button>
+        <button onclick="goToLocation('EDGETOWN')">EDGE OF TOWN &gt;</button>
+      </div>
+    `;
+  } else if (loc === 'EDGETOWN') {
+    view.innerHTML = `
+      <h2>EDGE OF TOWN</h2>
+      <p>Between town and the pit's mouth.</p>
+      <div class="locations">
+        <button onclick="descendToMaze()">ENTER THE MAZE (Floor B${state.floor})</button>
+        <button onclick="doAction('utilities')">UTILITIES - Recover bodies (${state.bodies.length})</button>
+        <button onclick="goToLocation('CASTLE')">&lt; Return to the Castle</button>
+      </div>
+    `;
+  } else if (loc === 'MAZE') {
+    let enc = '';
+    if (state.encounter) {
+      const list = state.encounter.monsters.filter(m => m.hp > 0);
+      enc = `<div class="encounter" style="margin-top:6px;">In combat (round ${state.encounter.round}):</div>` +
+        `<ul style="margin:2px 0 0 20px;">${list.map(m => `<li>${m.name} <span class="dim">(hp ${Math.max(0,m.hp)})</span></li>`).join('')}</ul>`;
+    }
+    view.innerHTML = `
+      <h2>MAZE - FLOOR B${state.floor}</h2>
+      <div class="maze"><div class="floor-name">B${state.floor}</div>${MAZE_ART}</div>
+      <div class="kv" style="margin-top:6px;">
+        <div>Steps taken</div><div class="stat">${state.steps}</div>
+        <div>Deepest reached</div><div class="stat">B${state.deepest}</div>
+      </div>
+      ${enc}
+      <div style="margin-top:6px;">
+        <button onclick="goToLocation('CASTLE')">&lt; Retreat to Castle</button>
+      </div>
+    `;
+  }
+}
+
+function renderStats() {
+  const s = state.stats;
+  const el = $('stats-kv');
+  el.innerHTML = `
+    <div>Kills</div><div class="stat">${s.kills.toLocaleString()}</div>
+    <div>Encounters</div><div class="stat">${s.encounters.toLocaleString()}</div>
+    <div>XP earned</div><div class="stat">${s.xpGained.toLocaleString()}</div>
+    <div>Gold earned</div><div class="stat">${s.goldEarned.toLocaleString()}</div>
+    <div>Deaths</div><div class="stat">${s.deaths}</div>
+    <div>Resurrections</div><div class="stat">${s.resurrections}</div>
+    <div>Werdna slain</div><div class="stat">${s.werdnaKills}</div>
+    <div>Deepest floor</div><div class="stat">B${state.deepest}</div>
+  `;
+}
+
+function renderPrestige() {
+  const p = state.prestige;
+  $('prestige-box').innerHTML = `
+    <div>Amulets recovered: <span class="hi">${p.amulets}</span></div>
+    <div class="kv" style="margin-top:6px;">
+      <div>Gold bonus</div><div class="stat good">+${Math.round(p.perkGoldPct*100)}%</div>
+      <div>XP bonus</div><div class="stat good">+${Math.round(p.perkXpPct*100)}%</div>
+      <div>HP bonus</div><div class="stat good">+${Math.round(p.perkHpPct*100)}%</div>
+      <div>Level HP boost</div><div class="stat good">+${Math.round(p.perkClassBoost*100)}%</div>
+    </div>
+    <div class="dim" style="margin-top:6px; font-size:11px;">
+      Every time you slay Werdna, the Amulet whispers a permanent boon.
+    </div>
+  `;
+}
+
+function renderToggles() {
+  const t = state.toggles;
+  const items = [
+    ['autoRecruit','Auto-recruit at the Tavern to keep 6 heroes'],
+    ['autoTrain',  'Auto-level at the Training Grounds'],
+    ['autoHeal',   'Auto-heal & revive at the Temple of Cant'],
+    ['autoBuy',    "Auto-buy upgrades at Boltac's"],
+    ['autoDelve',  'Auto-descend into the Maze when ready'],
+    ['autoDescend','Auto-take the stairs deeper when floor clears'],
+    ['autoCastCombat','Auto-cast spells during combat'],
+  ];
+  $('toggles').innerHTML = items.map(([k, label]) =>
+    `<label><input type="checkbox" ${t[k]?'checked':''} data-t="${k}"> ${label}</label>`
+  ).join('');
+  $('toggles').querySelectorAll('input').forEach(inp => {
+    inp.onchange = () => { state.toggles[inp.dataset.t] = inp.checked; save(); };
+  });
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+window.doAction = function(kind) {
+  if (kind === 'tavern')     recruit();
+  if (kind === 'training')   trainingGrounds();
+  if (kind === 'temple')     templeHealAll();
+  if (kind === 'boltac')     boltacShopping();
+  if (kind === 'inn')        restInn();
+  if (kind === 'utilities')  retrieveBodies();
+  render();
+};
+
+window.goToLocation = goToLocation;
+
+window.descendToMaze = function() {
+  if (state.party.filter(Boolean).length === 0) {
+    LOG(`<span class="warn">You need at least one adventurer.</span>`);
+    return;
+  }
+  goToLocation('MAZE');
+};
+
+$('btn-recruit').onclick = () => { doAction('tavern'); };
+$('btn-dismiss').onclick = () => { dismissSelected(); render(); };
+
+$('btn-save').onclick = () => { save(); LOG(`<span class="dim">Game saved.</span>`); };
+$('btn-export').onclick = () => {
+  const s = JSON.stringify(state);
+  navigator.clipboard.writeText(s).then(()=>LOG(`<span class="dim">Save copied to clipboard.</span>`));
+};
+$('btn-import').onclick = () => {
+  const s = prompt('Paste save JSON:');
+  if (!s) return;
+  try {
+    const parsed = JSON.parse(s);
+    Object.assign(state, parsed);
+    save();
+    LOG(`<span class="dim">Save loaded.</span>`);
+    render();
+  } catch (e) { LOG(`<span class="bad">Import failed.</span>`); }
+};
+$('btn-wipe').onclick = () => {
+  if (confirm('Really wipe your save?')) {
+    localStorage.removeItem('wiz1idle');
+    location.reload();
+  }
+};
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+function save() {
+  try { localStorage.setItem('wiz1idle', JSON.stringify(state)); } catch(e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem('wiz1idle');
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    Object.assign(state, s);
+    for (const k of Object.keys({autoRecruit:0,autoTrain:0,autoHeal:0,autoBuy:0,autoDelve:0,autoDescend:0,autoCastCombat:0})) {
+      if (state.toggles[k] === undefined) state.toggles[k] = true;
+    }
+    for (const c of state.party) if (c) { recomputeMp(c); recomputeAc(c); }
+    return true;
+  } catch(e) { return false; }
+}
+
+// ============================================================
+// MAIN TICK LOOP
+// ============================================================
+function tick() {
+  state.tick++;
+
+  if (state.location === 'CASTLE' || state.location === 'EDGETOWN') {
+    if (state.toggles.autoTrain) trainingGrounds();
+    if (state.bodies.length && state.party.length < 6) retrieveBodies();
+    if (state.toggles.autoRecruit && state.party.length < 6 && state.tick % 3 === 0) recruit();
+    if (state.toggles.autoHeal && state.tick % 2 === 0) templeHealAll();
+    if (state.toggles.autoBuy && state.tick % 4 === 0) boltacShopping();
+    if (state.tick % 6 === 0) restInn();
+    for (const c of state.party) if (c && isAlive(c)) autoEquipBest(c);
+    const aliveCount = state.party.filter(c => c && isAlive(c)).length;
+    const hasDeadUnaffordable = state.party.some(c => c && c.status === 'DEAD' && state.gold < 100 * c.lvl);
+    if (state.toggles.autoDelve && aliveCount >= 3 &&
+        (state.party.filter(c => c && (c.status === 'DEAD' || c.status === 'ASHES')).length === 0 || hasDeadUnaffordable) &&
+        state.party.every(c => !c || !isAlive(c) || c.hp / c.maxHp > 0.9)) {
+      goToLocation('MAZE');
+    }
+  }
+
+  if (state.location === 'MAZE') {
+    if (state.encounter) {
+      combatRound();
+    } else {
+      if (returnToTownCheck()) {
+        LOG(`<span class="warn">The party retreats to the surface.</span>`);
+        goToLocation('CASTLE');
+      } else {
+        dungeonStep();
+      }
+    }
+  }
+
+  if (state.tick % 15 === 0) save();
+  render();
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  const loaded = load();
+  if (!loaded) {
+    LOG(`Trebor's herald: <span class="hi">"The Mad Overlord Werdna has stolen my amulet! Recover it, brave adventurer!"</span>`);
+    LOG(`Recruiting a starting party...`);
+    recruit('Fighter');
+    recruit('Fighter');
+    recruit('Thief');
+    recruit('Priest');
+    recruit('Mage');
+    recruit('Mage');
+    state.gold = 200;
+    for (const c of state.party) {
+      if (['Fighter','Samurai','Lord','Ninja'].includes(c.cls)) c.equipment.weapon = 'longsword';
+      else if (['Priest','Bishop'].includes(c.cls)) c.equipment.weapon = 'mace';
+      else c.equipment.weapon = 'staff';
+      const eqTest = (id) => canEquip(c, ITEM_BY_ID[id]) ? id : null;
+      c.equipment.armor = eqTest('leather') || eqTest('robes');
+      recomputeAc(c);
+    }
+  }
+  render();
+  setInterval(tick, 1000);
+}
+
+init();
+</script>
 </body>
 </html>
